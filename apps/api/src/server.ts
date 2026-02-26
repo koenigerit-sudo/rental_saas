@@ -1,6 +1,5 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import sensible from '@fastify/sensible';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { env } from './env.js';
@@ -8,7 +7,6 @@ import { dbHealthcheck, getDemoContext } from './db.js';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
-await app.register(sensible);
 
 const MoneySchema = z.object({ amount_minor: z.number().int(), currency: z.string().length(3) });
 
@@ -34,7 +32,7 @@ app.get('/health/db', async (_req, reply) => {
 
 app.post('/v1/quotes', async (req, reply) => {
   const parsed = QuoteRequest.safeParse(req.body);
-  if (!parsed.success) return reply.badRequest(parsed.error.flatten());
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
 
   const start = new Date(parsed.data.pickup_at).getTime();
   const end = new Date(parsed.data.dropoff_at).getTime();
@@ -51,7 +49,7 @@ app.post('/v1/quotes', async (req, reply) => {
 const HoldRequest = z.object({ tenant_id: z.string().uuid(), quote_id: z.string().uuid(), expires_in_seconds: z.number().int().min(60).max(3600) });
 app.post('/v1/holds', async (req, reply) => {
   const parsed = HoldRequest.safeParse(req.body);
-  if (!parsed.success) return reply.badRequest(parsed.error.flatten());
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
 
   return reply.code(201).send({
     hold_id: randomUUID(),
@@ -68,7 +66,7 @@ const CreateBooking = z.object({
 
 app.post('/v1/bookings', async (req, reply) => {
   const parsed = CreateBooking.safeParse(req.body);
-  if (!parsed.success) return reply.badRequest(parsed.error.flatten());
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
 
   return reply.code(201).send({
     booking_id: randomUUID(),
@@ -79,7 +77,7 @@ app.post('/v1/bookings', async (req, reply) => {
 
 app.get('/v1/bookings/:id', async (req, reply) => {
   const id = z.string().uuid().safeParse((req.params as { id: string }).id);
-  if (!id.success) return reply.badRequest({ message: 'Invalid booking id' });
+  if (!id.success) return reply.code(400).send({ message: 'Invalid booking id' });
 
   return {
     booking_id: id.data,
@@ -90,7 +88,7 @@ app.get('/v1/bookings/:id', async (req, reply) => {
 const PaymentIntent = z.object({ tenant_id: z.string().uuid(), booking_id: z.string().uuid(), mode: z.enum(['deposit', 'full', 'preauth']) });
 app.post('/v1/payments/intents', async (req, reply) => {
   const parsed = PaymentIntent.safeParse(req.body);
-  if (!parsed.success) return reply.badRequest(parsed.error.flatten());
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
 
   return reply.code(201).send({
     provider: 'stripe',
