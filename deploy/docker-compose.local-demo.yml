@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rental_demo
+      POSTGRES_USER: rental
+      POSTGRES_PASSWORD: rental
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_demo_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rental -d rental_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  db-init:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../db/migrations:/sql/migrations:ro
+      - ../db/seeds:/sql/seeds:ro
+    environment:
+      PGPASSWORD: rental
+    command: >
+      sh -c "
+      psql -h postgres -U rental -d rental_demo -f /sql/migrations/0001_init.sql &&
+      psql -h postgres -U rental -d rental_demo -f /sql/seeds/0001_demo_seed.sql
+      "
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - ../.env.local.example
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://rental:rental@postgres:5432/rental_demo?sslmode=disable
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - ../.env.local.example
+    environment:
+      NODE_ENV: development
+      WEB_PORT: 3001
+    ports:
+      - "3001:3001"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - ../.env.local.example
+    environment:
+      NODE_ENV: development
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_demo_data:

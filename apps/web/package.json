@@ -1,0 +1,21 @@
+{
+  "name": "@rental/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/web.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/web.js",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

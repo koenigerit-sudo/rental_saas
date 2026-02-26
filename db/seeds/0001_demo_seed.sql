@@ -1,0 +1,30 @@
+-- Demo seed data (idempotent style)
+
+INSERT INTO tenant (id, name, default_currency)
+SELECT '11111111-1111-1111-1111-111111111111', 'Demo Rentals', 'EUR'
+WHERE NOT EXISTS (
+  SELECT 1 FROM tenant WHERE id = '11111111-1111-1111-1111-111111111111'
+);
+
+INSERT INTO location (id, tenant_id, name, timezone)
+SELECT
+  '22222222-2222-2222-2222-222222222222',
+  '11111111-1111-1111-1111-111111111111',
+  'München Zentrale',
+  'Europe/Berlin'
+WHERE NOT EXISTS (
+  SELECT 1 FROM location WHERE id = '22222222-2222-2222-2222-222222222222'
+);
+
+INSERT INTO asset (id, tenant_id, location_id, vin, plate, vehicle_class, status)
+SELECT
+  '33333333-3333-3333-3333-333333333333',
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  'WBADEMO000001',
+  'M-DEMO-100',
+  'adventure',
+  'available'
+WHERE NOT EXISTS (
+  SELECT 1 FROM asset WHERE id = '33333333-3333-3333-3333-333333333333'
+);
