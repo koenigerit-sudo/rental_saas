@@ -3,12 +3,13 @@ import cors from '@fastify/cors';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { env } from './env.js';
-import { dbHealthcheck, getDemoContext } from './db.js';
+import { dbHealthcheck, getAdminOverview, getDemoContext, listAssets, listBookings } from './db.js';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
 
 const MoneySchema = z.object({ amount_minor: z.number().int(), currency: z.string().length(3) });
+const TenantQuery = z.object({ tenant_id: z.string().uuid() });
 
 const QuoteRequest = z.object({
   tenant_id: z.string().uuid(),
@@ -37,12 +38,15 @@ app.post('/v1/quotes', async (req, reply) => {
   const start = new Date(parsed.data.pickup_at).getTime();
   const end = new Date(parsed.data.dropoff_at).getTime();
   const days = Math.max(1, Math.ceil((end - start) / 86_400_000));
-  const amountMinor = days * 9900;
+
+  const classMultiplier = parsed.data.vehicle_class === 'touring' ? 1.2 : parsed.data.vehicle_class === 'roadster' ? 1.1 : 1;
+  const baseDaily = 9900;
+  const amountMinor = Math.round(days * baseDaily * classMultiplier);
 
   return {
     quote_id: randomUUID(),
     total: MoneySchema.parse({ amount_minor: amountMinor, currency: 'EUR' }),
-    meta: { days, pricing_model: 'daily_flat_v1' }
+    meta: { days, pricing_model: 'daily_dynamic_v2', vehicle_class: parsed.data.vehicle_class ?? 'adventure' }
   };
 });
 
@@ -70,6 +74,7 @@ app.post('/v1/bookings', async (req, reply) => {
 
   return reply.code(201).send({
     booking_id: randomUUID(),
+    booking_no: `BK-${Date.now()}`,
     status: 'confirmed',
     customer_type: parsed.data.customer_type
   });
@@ -99,7 +104,6 @@ app.post('/v1/payments/intents', async (req, reply) => {
 
 app.post('/v1/webhooks/stripe', async (req) => ({ received: true, type: (req.body as { type?: string })?.type ?? 'unknown' }));
 
-
 app.get('/v1/demo/context', async (_req, reply) => {
   try {
     const context = await getDemoContext();
@@ -120,6 +124,36 @@ app.get('/v1/demo/context', async (_req, reply) => {
         vehicle_class: context.vehicle_class
       }
     };
+  } catch {
+    return reply.code(503).send({ message: 'Database unavailable' });
+  }
+});
+
+app.get('/v1/assets', async (req, reply) => {
+  const parsed = TenantQuery.safeParse(req.query);
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
+  try {
+    return { items: await listAssets(parsed.data.tenant_id) };
+  } catch {
+    return reply.code(503).send({ message: 'Database unavailable' });
+  }
+});
+
+app.get('/v1/admin/bookings', async (req, reply) => {
+  const parsed = TenantQuery.safeParse(req.query);
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
+  try {
+    return { items: await listBookings(parsed.data.tenant_id) };
+  } catch {
+    return reply.code(503).send({ message: 'Database unavailable' });
+  }
+});
+
+app.get('/v1/admin/overview', async (req, reply) => {
+  const parsed = TenantQuery.safeParse(req.query);
+  if (!parsed.success) return reply.code(400).send(parsed.error.flatten());
+  try {
+    return await getAdminOverview(parsed.data.tenant_id);
   } catch {
     return reply.code(503).send({ message: 'Database unavailable' });
   }

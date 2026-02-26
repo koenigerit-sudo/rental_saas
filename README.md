@@ -29,7 +29,11 @@ Danach:
 - API Health: `http://localhost:3000/health`
 - API DB Health: `http://localhost:3000/health/db`
 - Demo Context: `http://localhost:3000/v1/demo/context`
-- Buchungs-UI (Demo): `http://localhost:3001/`
+- Buchungs-UI + Adminbereich (Demo): `http://localhost:3001/`
+
+
+- In der UI kannst du links zwischen **Buchungsseite** und **Adminbereich** wechseln.
+- Admin lädt KPIs, Fleet und Buchungen live über `/v1/admin/*` und `/v1/assets`.
 
 ### Beispiel-Call für Quote
 
