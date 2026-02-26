@@ -29,7 +29,7 @@ Danach:
 - API Health: `http://localhost:3000/health`
 - API DB Health: `http://localhost:3000/health/db`
 - Demo Context: `http://localhost:3000/v1/demo/context`
-- Web Service: `http://localhost:3001/`
+- Buchungs-UI (Demo): `http://localhost:3001/`
 
 ### Beispiel-Call für Quote
 
