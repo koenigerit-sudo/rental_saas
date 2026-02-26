@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Rental SaaS API
+  version: 1.0.0
+  description: API v1 Skeleton für B2C + B2B Rental SaaS.
+servers:
+  - url: https://api.example.com/v1
+security:
+  - bearerAuth: []
+paths:
+  /quotes:
+    post:
+      summary: Preis/Verfügbarkeitsangebot berechnen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Quote erstellt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+  /holds:
+    post:
+      summary: Inventar temporär reservieren (Hold)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldRequest'
+      responses:
+        '201':
+          description: Hold aktiv
+  /bookings:
+    post:
+      summary: Buchung aus Hold bestätigen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking erstellt
+  /bookings/{id}:
+    get:
+      summary: Buchung abrufen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking Daten
+  /payments/intents:
+    post:
+      summary: Zahlungsabsicht erstellen (Deposit/Full/Preauth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentIntentRequest'
+      responses:
+        '201':
+          description: Payment Intent erzeugt
+
+  /assets:
+    get:
+      summary: Assets für Tenant laden
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Asset Liste
+  /admin/overview:
+    get:
+      summary: Admin KPI Übersicht laden
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: KPI Daten
+  /admin/bookings:
+    get:
+      summary: Buchungen für Adminliste laden
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking Liste
+  /webhooks/stripe:
+    post:
+      summary: Stripe Webhook Endpoint
+      security: []
+      responses:
+        '200':
+          description: Event angenommen
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Money:
+      type: object
+      required: [amount_minor, currency]
+      properties:
+        amount_minor:
+          type: integer
+          example: 12900
+        currency:
+          type: string
+          example: EUR
+    QuoteRequest:
+      type: object
+      required: [tenant_id, pickup_at, dropoff_at, pickup_location_id]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        pickup_location_id:
+          type: string
+          format: uuid
+        dropoff_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        pickup_at:
+          type: string
+          format: date-time
+        dropoff_at:
+          type: string
+          format: date-time
+        vehicle_class:
+          type: string
+    QuoteResponse:
+      type: object
+      required: [quote_id, total]
+      properties:
+        quote_id:
+          type: string
+          format: uuid
+        total:
+          $ref: '#/components/schemas/Money'
+    HoldRequest:
+      type: object
+      required: [tenant_id, quote_id, expires_in_seconds]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        quote_id:
+          type: string
+          format: uuid
+        expires_in_seconds:
+          type: integer
+          example: 900
+    CreateBookingRequest:
+      type: object
+      required: [tenant_id, hold_id, customer_type]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        hold_id:
+          type: string
+          format: uuid
+        customer_type:
+          type: string
+          enum: [b2c, b2b]
+        corporate_account_id:
+          type: string
+          format: uuid
+          nullable: true
+    PaymentIntentRequest:
+      type: object
+      required: [tenant_id, booking_id, mode]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [deposit, full, preauth]

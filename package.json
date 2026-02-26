@@ -1,0 +1,13 @@
+{
+  "name": "rental-saas-starter",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run -ws build",
+    "dev": "npm run -w @rental/api dev",
+    "test": "npm run -ws test"
+  }
+}
